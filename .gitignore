@@ -1,0 +1,9 @@
+vendor/*
+ecc/*
+rsa/*
+logrotate.conf
+*.service
+*.log*
+*.user.toml
+*.exe
+*.exe~

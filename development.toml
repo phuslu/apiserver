@@ -1,0 +1,13 @@
+[default]
+listen_addr = ":8081"
+graceful_timeout = 300
+
+[ipinfo]
+url = "http://cn.ip.cn/?ip=%s"
+regex = '来自：(\S+) (\S+)'
+cache_ttl = 86400
+
+[googleplay]
+search_url = "https://play.google.com/store/search?q=%s&c=apps"
+search_regex = '<a class="title" href="/store/apps/details\?id=(\S+)" title="([^"]+)"'
+search_ttl = 86400

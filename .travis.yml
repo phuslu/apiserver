@@ -1,0 +1,17 @@
+dist: trusty
+sudo: false
+
+language: bash
+
+script:
+  - cd /tmp
+  - bash -xe < <(curl -kL https://github.com/phuslu/apiserver/raw/master/ci.sh)
+
+branches:
+  only:
+    - master
+
+addons:
+  apt:
+    packages:
+      - p7zip-full
