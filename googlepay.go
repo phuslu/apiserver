@@ -11,6 +11,7 @@ import (
 	"github.com/cloudflare/golibs/lrucache"
 	"github.com/phuslu/glog"
 	"github.com/valyala/fasthttp"
+	"go.uber.org/ratelimit"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -20,6 +21,7 @@ type LookupHandler struct {
 	SearchTTL    time.Duration
 	SearchCache  lrucache.Cache
 	Singleflight *singleflight.Group
+	Ratelimiter  ratelimit.Limiter
 	Transport    *http.Transport
 }
 
@@ -152,6 +154,7 @@ func (h *LookupHandler) googleplaySearch(query, lang string) ([]GoogleplaySearch
 	req.Header.Set("Accept-Language", strings.ToLower(lang)+";q=0.9,en-US;q=0.8,en;q=0.7")
 
 	v, err, _ := h.Singleflight.Do(url+lang, func() (interface{}, error) {
+		h.Ratelimiter.Take()
 		return h.Transport.RoundTrip(req)
 	})
 	if err != nil {

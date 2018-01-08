@@ -14,9 +14,10 @@ type Config struct {
 		GracefulTimeout int
 	}
 	Googleplay struct {
-		SearchUrl   string
-		SearchRegex string
-		SearchTtl   int
+		SearchUrl                string
+		SearchRegex              string
+		SearchTtl                int
+		SearchRatelimitPerSecond int
 	}
 	Ipinfo struct {
 		Url      string
