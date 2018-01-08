@@ -5,8 +5,8 @@ package main
 import (
 	"net"
 	"os"
-	"runtime"
 	"reflect"
+	"runtime"
 	"syscall"
 	"unsafe"
 
@@ -56,14 +56,10 @@ func SetProcessName(name string) error {
 }
 
 // https://github.com/golang/go/issues/11243#issuecomment-112631423
-func PinToCPU(cpu uint) error {
-	const __NR_sched_setaffinity = 203
-	var mask [1024 / 64]uint8
+func PinToCPU(cpu int) error {
 	runtime.LockOSThread()
-	mask[cpu/64] |= 1 << (cpu % 64)
-	_, _, errno := syscall.RawSyscall(__NR_sched_setaffinity, 0, uintptr(len(mask)*8), uintptr(unsafe.Pointer(&mask)))
-	if errno != 0 {
-		return errno
-	}
-	return nil
+
+	var mask unix.CPUSet
+	mask.Set(cpu)
+	return unix.SchedSetaffinity(0, &mask)
 }
