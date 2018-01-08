@@ -77,6 +77,14 @@ func (h *LookupHandler) LookupTitle(ctx *fasthttp.RequestCtx) {
 				break
 			}
 		}
+
+		for _, item := range items {
+			if strings.HasPrefix(item.Title, req.Title) {
+				pkgName = item.PackageName
+				h.SearchCache.Set(key, pkgName, time.Now().Add(h.SearchTTL))
+				break
+			}
+		}
 	}
 
 	status := 200
@@ -116,6 +124,14 @@ func (h *LookupHandler) LookupPackageName(ctx *fasthttp.RequestCtx) {
 
 		for _, item := range items {
 			if item.PackageName == req.PackageName {
+				title = item.Title
+				h.SearchCache.Set(key, title, time.Now().Add(h.SearchTTL))
+				break
+			}
+		}
+
+		for _, item := range items {
+			if strings.HasPrefix(item.PackageName, req.PackageName) {
 				title = item.Title
 				h.SearchCache.Set(key, title, time.Now().Add(h.SearchTTL))
 				break
