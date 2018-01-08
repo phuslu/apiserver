@@ -116,6 +116,8 @@ func main() {
 	glog.Infof("apiserver %s ListenAndServe on %s\n", version, ln.Addr().String())
 	go fasthttp.Serve(ln, router.Handler)
 
+	glog.Flush()
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGHUP)
 
