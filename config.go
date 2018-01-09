@@ -45,5 +45,9 @@ func NewConfig(filename string) (*Config, error) {
 		return nil, fmt.Errorf("toml.Decode(%s) error: %+v", tomlData, err)
 	}
 
+	if config.Googleplay.SearchRatelimitPerSecond == 0 {
+		config.Googleplay.SearchRatelimitPerSecond = 1
+	}
+
 	return &config, nil
 }
