@@ -32,6 +32,7 @@ fi
 
 start() {
     test $(ulimit -n) -lt 65535 && ulimit -n 65535
+    cd ${DIRECTORY}
     nohup ${DIRECTORY}/apiserver -log_dir . >>apiserver.log 2>&1 &
     local pid=$!
     sleep 1
