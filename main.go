@@ -19,8 +19,8 @@ import (
 	"github.com/json-iterator/go"
 	"github.com/phuslu/glog"
 	"github.com/valyala/fasthttp"
-	"go.uber.org/ratelimit"
 	"golang.org/x/sync/singleflight"
+	"golang.org/x/time/rate"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
@@ -96,8 +96,13 @@ func main() {
 		SearchTTL:    time.Duration(config.Googleplay.SearchTtl) * time.Second,
 		SearchCache:  lrucache.NewLRUCache(10000),
 		Singleflight: &singleflight.Group{},
-		Ratelimiter:  ratelimit.New(config.Googleplay.SearchRatelimitPerSecond),
 		Transport:    transport,
+	}
+
+	if config.Googleplay.SearchRatelimitPerSecond > 0 {
+		var r rate.Limit = rate.Limit(config.Googleplay.SearchRatelimitPerSecond)
+		var b int = config.Googleplay.SearchRatelimitPerSecond
+		googleplay.Ratelimiter = rate.NewLimiter(r, b)
 	}
 
 	router := fasthttprouter.New()
