@@ -124,11 +124,13 @@ func main() {
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGHUP)
+	signal.Notify(c, syscall.SIGTERM)
 
 	switch <-c {
 	case syscall.SIGHUP:
 	default:
 		glog.Infof("apiserver server closed.")
+		glog.Flush()
 		os.Exit(0)
 	}
 
