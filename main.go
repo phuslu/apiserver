@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"regexp"
 	"syscall"
 	"time"
@@ -34,7 +33,7 @@ func main() {
 
 	rand.Seed(time.Now().UnixNano())
 	OLDPWD, _ := os.Getwd()
-	glog.LogName = filepath.Base(os.Args[0]) + ".log"
+	glog.DailyRolling = true
 
 	if len(os.Args) > 1 && os.Args[1] == "-version" {
 		fmt.Println(version)
