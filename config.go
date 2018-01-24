@@ -16,6 +16,8 @@ type Config struct {
 	Googleplay struct {
 		SearchUrl                string
 		SearchRegex              string
+		DetailUrl                string
+		DetailRegex              string
 		SearchTtl                int
 		SearchRatelimitPerSecond int
 	}

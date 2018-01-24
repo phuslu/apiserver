@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -19,6 +20,8 @@ import (
 type LookupHandler struct {
 	SearchURL    string
 	SearchRegex  *regexp.Regexp
+	DetailURL    string
+	DetailRegex  *regexp.Regexp
 	SearchTTL    time.Duration
 	SearchCache  lrucache.Cache
 	Singleflight *singleflight.Group
@@ -117,10 +120,18 @@ func (h *LookupHandler) LookupPackageName(ctx *fasthttp.RequestCtx) {
 	if v, ok := h.SearchCache.GetNotStale(key); ok {
 		title = v.(string)
 	} else {
-		items, err := h.googleplaySearch(req.PackageName, req.GEO)
-		if err != nil {
-			h.Error(ctx, err)
-			return
+		var items []GoogleplaySearchItem
+		var err error
+
+		item, err := h.googleplayDetail(req.PackageName, req.GEO)
+		if item != nil {
+			items = append(items, *item)
+		} else {
+			items, err = h.googleplaySearch(req.PackageName, req.GEO)
+			if err != nil {
+				h.Error(ctx, err)
+				return
+			}
 		}
 
 		for _, item := range items {
@@ -179,6 +190,7 @@ func (h *LookupHandler) googleplaySearch(query, lang string) ([]GoogleplaySearch
 				return nil, err
 			}
 		}
+		glog.Infof("GET %s", req.URL)
 		return h.Transport.RoundTrip(req)
 	})
 	if err != nil {
@@ -207,4 +219,56 @@ func (h *LookupHandler) googleplaySearch(query, lang string) ([]GoogleplaySearch
 	h.Singleflight.Forget(url + lang)
 
 	return items, nil
+}
+
+func (h *LookupHandler) googleplayDetail(pkgName, lang string) (*GoogleplaySearchItem, error) {
+	url := fmt.Sprintf(h.DetailURL, pkgName, strings.ToLower(lang))
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Accept-Language", strings.ToLower(lang)+";q=0.9,en-US;q=0.8,en;q=0.7")
+
+	v, err, _ := h.Singleflight.Do(url+lang, func() (interface{}, error) {
+		if h.Ratelimiter != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+			defer cancel()
+			err := h.Ratelimiter.Wait(ctx)
+			if err != nil {
+				return nil, err
+			}
+		}
+		glog.Infof("GET %s", req.URL)
+		return h.Transport.RoundTrip(req)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	resp := v.(*http.Response)
+	defer resp.Body.Close()
+
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	match := h.DetailRegex.FindStringSubmatch(string(data))
+
+	if match == nil {
+		return nil, fmt.Errorf("no match for %s", pkgName)
+	}
+
+	item := &GoogleplaySearchItem{
+		PackageName: pkgName,
+		Title:       match[1],
+	}
+
+	glog.Infof("googleplayDetail(%#v, %#v) return item %#v", pkgName, lang, item)
+
+	h.Singleflight.Forget(url + lang)
+
+	return item, nil
 }

@@ -92,6 +92,8 @@ func main() {
 	googleplay := &LookupHandler{
 		SearchURL:    config.Googleplay.SearchUrl,
 		SearchRegex:  regexp.MustCompile(config.Googleplay.SearchRegex),
+		DetailURL:    config.Googleplay.DetailUrl,
+		DetailRegex:  regexp.MustCompile(config.Googleplay.DetailRegex),
 		SearchTTL:    time.Duration(config.Googleplay.SearchTtl) * time.Second,
 		SearchCache:  lrucache.NewLRUCache(10000),
 		Singleflight: &singleflight.Group{},

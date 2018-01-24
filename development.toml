@@ -10,5 +10,7 @@ cache_ttl = 86400
 [googleplay]
 search_url = "https://play.google.com/store/search?q=%s&c=apps"
 search_regex = '<a class="title" href="/store/apps/details\?id=(\S+)" title="([^"]+)"'
+detail_url = "https://play.google.com/store/apps/details?id=%s&hl=%s"
+detail_regex = ' id="main-title">(.+?) [\-–]'
 search_ttl = 86400
 search_ratelimit_per_second = 1
