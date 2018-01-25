@@ -156,7 +156,9 @@ func (h *LookupHandler) LookupPackageName(ctx *fasthttp.RequestCtx) {
 		status = 204
 	}
 
-	json.NewEncoder(ctx).Encode(LookupResponse{
+	enc := json.NewEncoder(ctx)
+	enc.SetEscapeHTML(false)
+	enc.Encode(LookupResponse{
 		Status: status,
 		Title:  title,
 	})
@@ -210,6 +212,8 @@ func (h *LookupHandler) googleplaySearch(query, lang string) ([]GoogleplaySearch
 	items := make([]GoogleplaySearchItem, 0)
 	for _, group := range matches {
 		name, title := group[1], group[2]
+		title = strings.Replace(title, "&amp;", "&", -1)
+		title = strings.Replace(title, "\\u0026", "&", -1)
 		items = append(items, GoogleplaySearchItem{name, title})
 	}
 
@@ -261,9 +265,13 @@ func (h *LookupHandler) googleplayDetail(pkgName, lang string) (*GoogleplaySearc
 		return nil, fmt.Errorf("no match for %s", pkgName)
 	}
 
+	title := match[1]
+	title = strings.Replace(title, "&amp;", "&", -1)
+	title = strings.Replace(title, "\\u0026", "&", -1)
+
 	item := &GoogleplaySearchItem{
 		PackageName: pkgName,
-		Title:       match[1],
+		Title:       title,
 	}
 
 	glog.Infof("googleplayDetail(%#v, %#v) return item %#v", pkgName, lang, item)
