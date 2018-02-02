@@ -26,6 +26,9 @@ type Config struct {
 		Regex    string
 		CacheTtl int
 	}
+	Limiter struct {
+		Threshold int
+	}
 }
 
 func NewConfig(filename string) (*Config, error) {
@@ -49,6 +52,10 @@ func NewConfig(filename string) (*Config, error) {
 
 	if config.Googleplay.SearchRatelimitPerSecond == 0 {
 		config.Googleplay.SearchRatelimitPerSecond = 1
+	}
+
+	if config.Limiter.Threshold == 0 {
+		config.Limiter.Threshold = 10000
 	}
 
 	return &config, nil

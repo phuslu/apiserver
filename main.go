@@ -106,6 +106,10 @@ func main() {
 		googleplay.Ratelimiter = rate.NewLimiter(r, b)
 	}
 
+	limiter := &LimiterHandler{
+		Threshold: config.Limiter.Threshold,
+	}
+
 	router := fasthttprouter.New()
 	router.GET("/", Index)
 	router.GET("/metrics", Metrics)
@@ -113,6 +117,7 @@ func main() {
 	router.GET("/ipinfo/:ip", ipinfo.Ipinfo)
 	router.POST("/lookup-title", googleplay.LookupTitle)
 	router.POST("/lookup-pkgname", googleplay.LookupPackageName)
+	router.POST("/limit", limiter.PubidLimiter)
 
 	ln, err := ReusePortListen("tcp", config.Default.ListenAddr)
 	if err != nil {
