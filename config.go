@@ -15,9 +15,10 @@ type Config struct {
 		GracefulTimeout int
 	}
 	Ipinfo struct {
-		Url      string
-		Regex    string
-		CacheTtl int
+		Url       string
+		Regex     string
+		CacheTtl  int
+		Ratelimit int
 	}
 	Limiter struct {
 		Threshold int

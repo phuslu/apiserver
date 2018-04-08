@@ -3,17 +3,22 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cloudflare/golibs/lrucache"
 	"github.com/phuslu/glog"
 	"github.com/valyala/fasthttp"
 	"golang.org/x/sync/singleflight"
+	"golang.org/x/time/rate"
 )
+
+type IpinfoLimiterKey struct {
+	Token string
+}
 
 type IpinfoHandler struct {
 	URL          string
@@ -22,10 +27,18 @@ type IpinfoHandler struct {
 	CacheTTL     time.Duration
 	Singleflight *singleflight.Group
 	Transport    *http.Transport
+	RateLimit    int
+
+	m sync.Map // map[LimiterKey]*rate.Limiter
+}
+
+type IpinfoRequest struct {
+	IP    string `json:"ip"`
+	Token string `json:"token"`
 }
 
 type IpinfoResponse struct {
-	Error    string `json:"error,omitempty""`
+	Error    string `json:"error,omitempty"`
 	Location string `json:"location,omitempty"`
 	ISP      string `json:"isp,omitempty"`
 }
@@ -41,19 +54,36 @@ func (h *IpinfoHandler) Ipinfo(ctx *fasthttp.RequestCtx) {
 		glog.Infof("%s \"%s %s\" \"%s\"", ctx.RemoteAddr(), ctx.Method(), ctx.URI(), ctx.UserAgent())
 	}
 
-	var err error
-	var item *IpinfoItem
+	var req IpinfoRequest
 
-	ipStr, _ := ctx.UserValue("ip").(string)
-	if ipStr == "" {
-		ipStr, _, _ = net.SplitHostPort(ctx.RemoteAddr().String())
+	err := json.Unmarshal(ctx.PostBody(), &req)
+	if err != nil {
+		h.Error(ctx, err)
+		return
 	}
 
-	key := "ipinfo:" + ipStr
+	limitKey := IpinfoLimiterKey{
+		Token: req.Token,
+	}
+
+	v, ok := h.m.Load(limitKey)
+	if !ok {
+		v, _ = h.m.LoadOrStore(limitKey, rate.NewLimiter(rate.Limit(h.RateLimit), h.RateLimit))
+	}
+
+	limiter := v.(*rate.Limiter)
+	if !limiter.Allow() {
+		h.Error(ctx, fmt.Errorf("limitKey=%#v over limit", limitKey))
+		return
+	}
+
+	var item *IpinfoItem
+
+	key := "ipinfo:" + req.IP
 	if v, ok := h.Cache.GetNotStale(key); ok {
 		item = v.(*IpinfoItem)
 	} else {
-		item, err = h.ipinfoSearch(ipStr)
+		item, err = h.ipinfoSearch(req.IP)
 		if err != nil {
 			h.Error(ctx, err)
 			return

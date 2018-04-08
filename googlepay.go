@@ -102,68 +102,6 @@ func (h *LookupHandler) LookupTitle(ctx *fasthttp.RequestCtx) {
 	})
 }
 
-func (h *LookupHandler) LookupPackageName(ctx *fasthttp.RequestCtx) {
-	if glog.V(2) {
-		glog.Infof("%s \"%s %s\" \"%s\"", ctx.RemoteAddr(), ctx.Method(), ctx.URI(), ctx.UserAgent())
-	}
-
-	var req LookupRequest
-	var title string
-
-	err := json.Unmarshal(ctx.PostBody(), &req)
-	if err != nil {
-		h.Error(ctx, err)
-		return
-	}
-
-	key := "pkgname:" + req.PackageName + ":" + req.GEO
-	if v, ok := h.SearchCache.GetNotStale(key); ok {
-		title = v.(string)
-	} else {
-		var items []GoogleplaySearchItem
-		var err error
-
-		item, err := h.googleplayDetail(req.PackageName, req.GEO)
-		if item != nil {
-			items = append(items, *item)
-		} else {
-			items, err = h.googleplaySearch(req.PackageName, req.GEO)
-			if err != nil {
-				h.Error(ctx, err)
-				return
-			}
-		}
-
-		for _, item := range items {
-			if item.PackageName == req.PackageName {
-				title = item.Title
-				h.SearchCache.Set(key, title, time.Now().Add(h.SearchTTL))
-				break
-			}
-		}
-
-		for _, item := range items {
-			if strings.HasPrefix(item.PackageName, req.PackageName) {
-				title = item.Title
-				h.SearchCache.Set(key, title, time.Now().Add(h.SearchTTL))
-				break
-			}
-		}
-	}
-
-	status := 200
-	if title == "" {
-		status = 204
-	}
-
-	enc := json.NewEncoder(ctx)
-	enc.SetEscapeHTML(false)
-	enc.Encode(LookupResponse{
-		Status: status,
-		Title:  title,
-	})
-}
-
 type GoogleplaySearchItem struct {
 	PackageName string
 	Title       string
