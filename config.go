@@ -11,6 +11,7 @@ import (
 type Config struct {
 	Default struct {
 		ListenAddr      string
+		TcpFastopen     bool
 		GracefulTimeout int
 	}
 	Ipinfo struct {

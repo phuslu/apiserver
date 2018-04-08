@@ -28,6 +28,9 @@ func (d *TCPDialer) Dial(network, address string) (net.Conn, error) {
 }
 
 func (d *TCPDialer) DialTLS(network, address string, tlsConfig *tls.Config) (net.Conn, error) {
+	if tlsConfig.ClientSessionCache == nil {
+		tlsConfig.ClientSessionCache = d.TLSClientSessionCache
+	}
 	return d.dialContext(context.Background(), network, address, tlsConfig)
 }
 
@@ -69,10 +72,6 @@ func (d *TCPDialer) dialContext(ctx context.Context, network, address string, tl
 		}
 	}
 
-	if d.RejectIntranet && IsReservedIP(ips[0]) {
-		return nil, net.InvalidAddrError("Intranet address is rejected: " + ips[0].String())
-	}
-
 	port, _ := strconv.Atoi(portStr)
 
 	if d.Timeout > 0 {
@@ -99,6 +98,10 @@ func (d *TCPDialer) dialContext(ctx context.Context, network, address string, tl
 
 func (d *TCPDialer) dialSerial(ctx context.Context, network, hostname string, ips []net.IP, port int, tlsConfig *tls.Config) (conn net.Conn, err error) {
 	for i, ip := range ips {
+		if d.RejectIntranet && IsReservedIP(ip) {
+			return nil, net.InvalidAddrError("Intranet address is rejected: " + ip.String())
+		}
+
 		raddr := &net.TCPAddr{IP: ip, Port: port}
 		conn, err = net.DialTCPContext(ctx, network, d.LocalAddr, raddr, d.Control)
 		if err != nil {
@@ -143,6 +146,11 @@ func (d *TCPDialer) dialParallel(ctx context.Context, network, hostname string, 
 	lane := make(chan dialResult, level)
 	for i := 0; i < level; i++ {
 		go func(ip net.IP, port int, tlsConfig *tls.Config) {
+			if d.RejectIntranet && IsReservedIP(ip) {
+				lane <- dialResult{nil, net.InvalidAddrError("Intranet address is rejected: " + ip.String())}
+				return
+			}
+
 			raddr := &net.TCPAddr{IP: ip, Port: port}
 			conn, err := net.DialTCPContext(ctx, network, d.LocalAddr, raddr, d.Control)
 			if err != nil {

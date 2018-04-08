@@ -99,7 +99,13 @@ func main() {
 	router.GET("/ipinfo/:ip", ipinfo.Ipinfo)
 	router.POST("/limit", limiter.PubidLimiter)
 
-	ln, err := ReusePortListen("tcp", config.Default.ListenAddr)
+	an := Announcer{
+		FastOpen:    config.Default.TcpFastopen,
+		ReusePort:   true,
+		DeferAccept: true,
+	}
+
+	ln, err := an.Listen("tcp", config.Default.ListenAddr)
 	if err != nil {
 		glog.Fatalf("TLS Listen(%s) error: %s", config.Default.ListenAddr, err)
 	}
