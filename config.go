@@ -13,14 +13,6 @@ type Config struct {
 		ListenAddr      string
 		GracefulTimeout int
 	}
-	Googleplay struct {
-		SearchUrl                string
-		SearchRegex              string
-		DetailUrl                string
-		DetailRegex              string
-		SearchTtl                int
-		SearchRatelimitPerSecond int
-	}
 	Ipinfo struct {
 		Url      string
 		Regex    string
@@ -48,10 +40,6 @@ func NewConfig(filename string) (*Config, error) {
 	var config Config
 	if err = toml.Unmarshal(tomlData, &config); err != nil {
 		return nil, fmt.Errorf("toml.Decode(%s) error: %+v", tomlData, err)
-	}
-
-	if config.Googleplay.SearchRatelimitPerSecond == 0 {
-		config.Googleplay.SearchRatelimitPerSecond = 1
 	}
 
 	if config.Limiter.Threshold == 0 {

@@ -19,7 +19,6 @@ import (
 	"github.com/phuslu/glog"
 	"github.com/valyala/fasthttp"
 	"golang.org/x/sync/singleflight"
-	"golang.org/x/time/rate"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
@@ -89,23 +88,6 @@ func main() {
 		Transport:    transport,
 	}
 
-	googleplay := &LookupHandler{
-		SearchURL:    config.Googleplay.SearchUrl,
-		SearchRegex:  regexp.MustCompile(config.Googleplay.SearchRegex),
-		DetailURL:    config.Googleplay.DetailUrl,
-		DetailRegex:  regexp.MustCompile(config.Googleplay.DetailRegex),
-		SearchTTL:    time.Duration(config.Googleplay.SearchTtl) * time.Second,
-		SearchCache:  lrucache.NewLRUCache(10000),
-		Singleflight: &singleflight.Group{},
-		Transport:    transport,
-	}
-
-	if config.Googleplay.SearchRatelimitPerSecond > 0 {
-		var r rate.Limit = rate.Limit(config.Googleplay.SearchRatelimitPerSecond)
-		var b int = config.Googleplay.SearchRatelimitPerSecond
-		googleplay.Ratelimiter = rate.NewLimiter(r, b)
-	}
-
 	limiter := &LimiterHandler{
 		Threshold: config.Limiter.Threshold,
 	}
@@ -115,8 +97,6 @@ func main() {
 	router.GET("/metrics", Metrics)
 	router.GET("/debug/pprof/*profile", Pprof)
 	router.GET("/ipinfo/:ip", ipinfo.Ipinfo)
-	router.POST("/lookup-title", googleplay.LookupTitle)
-	router.POST("/lookup-pkgname", googleplay.LookupPackageName)
 	router.POST("/limit", limiter.PubidLimiter)
 
 	ln, err := ReusePortListen("tcp", config.Default.ListenAddr)
