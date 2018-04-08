@@ -11,9 +11,7 @@ func Index(ctx *fasthttp.RequestCtx) {
 	fmt.Fprintf(ctx, `Ipinfo lookup:
 
 Usage:
-    curl -v http://%s/ipinfo/127.0.0.1
-    curl -v -d '{"title": "WhatsApp Messenger", "geo": "IN"}' http://%s/lookup-title
-    curl -v -d '{"pkg_name": "com.whatsapp", "geo": "IN"}' http://%s/lookup-pkgname
+    curl -v -d '{"ip": "1.1.1.1", "token": "42"}' http://%s/ipinfo
 
-`, host, host, host)
+`, host)
 }

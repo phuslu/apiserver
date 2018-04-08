@@ -87,6 +87,7 @@ func main() {
 		Cache:        lrucache.NewLRUCache(10000),
 		Singleflight: &singleflight.Group{},
 		Transport:    transport,
+		RateLimit:    config.Ipinfo.Ratelimit,
 		Config:       config,
 	}
 
@@ -94,7 +95,7 @@ func main() {
 	router.GET("/", Index)
 	router.GET("/metrics", Metrics)
 	router.GET("/debug/pprof/*profile", Pprof)
-	router.GET("/ipinfo", ipinfo.Ipinfo)
+	router.POST("/ipinfo", ipinfo.Ipinfo)
 
 	an := Announcer{
 		FastOpen:    config.Default.TcpFastopen,
