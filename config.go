@@ -25,6 +25,10 @@ type Config struct {
 		CacheTtl  int
 		Ratelimit int
 	}
+	Bid struct {
+		AerospikeHost string
+		AerospikePort int
+	}
 }
 
 func (c *Config) reload() error {

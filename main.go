@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/aerospike/aerospike-client-go"
 	"github.com/buaazp/fasthttprouter"
 	"github.com/cloudflare/golibs/lrucache"
 	"github.com/json-iterator/go"
@@ -97,11 +98,22 @@ func main() {
 		Config:       config,
 	}
 
+	asClient, err := aerospike.NewClient(config.Bid.AerospikeHost, config.Bid.AerospikePort)
+	if err != nil {
+		// glog.Fatals().Err(err).Str("aerospike_host", config.Bid.AerospikeHost).Int("aerospike_port", config.Bid.AerospikePort).Msg("aerospike.NewClient(..) error")
+	}
+
+	bidder := &BidHandler{
+		AeroSpike: asClient,
+		Config:    config,
+	}
+
 	router := fasthttprouter.New()
 	router.GET("/", Index)
 	router.GET("/metrics", Metrics)
 	router.GET("/debug/pprof/*profile", Pprof)
 	router.POST("/ipinfo", ipinfo.Ipinfo)
+	router.POST("/bid", bidder.Bid)
 
 	an := Announcer{
 		FastOpen:    config.Default.TcpFastopen,
