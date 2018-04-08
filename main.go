@@ -49,6 +49,7 @@ func main() {
 	if err != nil {
 		glog.Fatalf("NewConfig(%#v) error: %+v", flag.Arg(0), err)
 	}
+	go config.Watcher()
 
 	// see http.DefaultTransport
 	dialer := &TCPDialer{
@@ -86,6 +87,7 @@ func main() {
 		Cache:        lrucache.NewLRUCache(10000),
 		Singleflight: &singleflight.Group{},
 		Transport:    transport,
+		Config:       config,
 	}
 
 	router := fasthttprouter.New()

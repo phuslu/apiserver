@@ -28,6 +28,7 @@ type IpinfoHandler struct {
 	Singleflight *singleflight.Group
 	Transport    *http.Transport
 	RateLimit    int
+	Config       *Config
 
 	m sync.Map // map[LimiterKey]*rate.Limiter
 }
