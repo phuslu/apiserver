@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"sync"
 	"syscall"
 	"time"
 
@@ -28,16 +29,21 @@ var (
 )
 
 func main() {
+	StartWatchDog()
+
 	var err error
 
-	rand.Seed(time.Now().UnixNano())
-	OLDPWD, _ := os.Getwd()
 	glog.DailyRolling = true
+	glog.Version = version
+	rand.Seed(time.Now().UnixNano())
 
 	if len(os.Args) > 1 && os.Args[1] == "-version" {
 		fmt.Println(version)
 		return
 	}
+
+	var validate bool
+	flag.BoolVar(&validate, "validate", false, "parse the apiserver toml and exit")
 
 	if !HasString(os.Args, "-log_dir") {
 		flag.Set("logtostderr", "true")
@@ -108,54 +114,55 @@ func main() {
 		glog.Fatalf("TLS Listen(%s) error: %s", config.Default.ListenAddr, err)
 	}
 
+	server := &fasthttp.Server{
+		Handler: router.Handler,
+		Name:    "apiserver",
+	}
+
 	glog.Infof("apiserver %s ListenAndServe on %s\n", version, ln.Addr().String())
-	go fasthttp.Serve(ln, router.Handler)
+	go server.Serve(ln)
 
 	glog.Flush()
 
+	if validate {
+		os.Exit(0)
+	}
+
 	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGHUP)
 	signal.Notify(c, syscall.SIGTERM)
+	signal.Notify(c, syscall.SIGINT)
+	signal.Notify(c, syscall.SIGHUP)
 
 	switch <-c {
-	case syscall.SIGHUP:
-	default:
-		glog.Infof("apiserver server closed.")
+	case syscall.SIGTERM, syscall.SIGINT:
+		glog.Infos().Msg("apiserver flush logs and exit.")
 		glog.Flush()
 		os.Exit(0)
 	}
 
-	glog.Infof("apiserver flush logs")
+	glog.Warnings().Msg("apiserver start graceful shutdown...")
 	glog.Flush()
 
-	glog.Infof("apiserver start new child server")
-	exe, err := os.Executable()
-	if err != nil {
-		glog.Fatalf("os.Executable() error: %+v", exe)
-	}
-
-	_, err = os.StartProcess(exe, os.Args, &os.ProcAttr{
-		Dir:   OLDPWD,
-		Env:   os.Environ(),
-		Files: []*os.File{os.Stdin, os.Stdout, os.Stderr},
-	})
-	if err != nil {
-		glog.Fatalf("os.StartProcess(%+v, %+v) error: %+v", exe, os.Args, err)
-	}
-
-	glog.Warningf("apiserver start graceful shutdown...")
 	SetProcessName("apiserver: (graceful shutdown)")
 
 	timeout := 5 * time.Minute
-	if config.Default.GracefulTimeout > 0 {
-		timeout = time.Duration(config.Default.GracefulTimeout) * time.Second
+	if config.reload() == nil {
+		if config.Default.GracefulTimeout > 0 {
+			timeout = time.Duration(config.Default.GracefulTimeout) * time.Second
+		}
 	}
 
-	if err := ln.Close(); err != nil {
-		glog.Errorf("%T.Shutdown() error: %+v", ln, err)
-	}
+	var wg sync.WaitGroup
+	go func(server *fasthttp.Server, ln net.Listener) {
+		wg.Add(1)
+		defer wg.Done()
 
-	time.Sleep(timeout)
+		ln.Close()
 
-	glog.Infof("apiserver server shutdown.")
+		time.Sleep(timeout)
+	}(server, ln)
+	wg.Wait()
+
+	glog.Infos().Msg("apiserver server shutdown")
+	glog.Flush()
 }
