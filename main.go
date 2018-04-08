@@ -88,16 +88,11 @@ func main() {
 		Transport:    transport,
 	}
 
-	limiter := &LimiterHandler{
-		Threshold: config.Limiter.Threshold,
-	}
-
 	router := fasthttprouter.New()
 	router.GET("/", Index)
 	router.GET("/metrics", Metrics)
 	router.GET("/debug/pprof/*profile", Pprof)
-	router.GET("/ipinfo/:ip", ipinfo.Ipinfo)
-	router.POST("/limit", limiter.PubidLimiter)
+	router.GET("/ipinfo", ipinfo.Ipinfo)
 
 	an := Announcer{
 		FastOpen:    config.Default.TcpFastopen,

@@ -20,9 +20,6 @@ type Config struct {
 		CacheTtl  int
 		Ratelimit int
 	}
-	Limiter struct {
-		Threshold int
-	}
 }
 
 func NewConfig(filename string) (*Config, error) {
@@ -42,10 +39,6 @@ func NewConfig(filename string) (*Config, error) {
 	var config Config
 	if err = toml.Unmarshal(tomlData, &config); err != nil {
 		return nil, fmt.Errorf("toml.Decode(%s) error: %+v", tomlData, err)
-	}
-
-	if config.Limiter.Threshold == 0 {
-		config.Limiter.Threshold = 10000
 	}
 
 	return &config, nil
