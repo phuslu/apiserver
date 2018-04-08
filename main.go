@@ -53,7 +53,7 @@ func main() {
 
 	config, err := NewConfig(flag.Arg(0))
 	if err != nil {
-		glog.Fatalf("NewConfig(%#v) error: %+v", flag.Arg(0), err)
+		glog.Fatals().Err(err).Str("filename", flag.Arg(0)).Msg("NewConfig(..) error")
 	}
 	go config.Watcher()
 
@@ -111,7 +111,7 @@ func main() {
 
 	ln, err := an.Listen("tcp", config.Default.ListenAddr)
 	if err != nil {
-		glog.Fatalf("TLS Listen(%s) error: %s", config.Default.ListenAddr, err)
+		glog.Fatals().Err(err).Str("listen_addr", config.Default.ListenAddr).Msg("TLS Listen(...) error")
 	}
 
 	server := &fasthttp.Server{
@@ -119,7 +119,7 @@ func main() {
 		Name:    "apiserver",
 	}
 
-	glog.Infof("apiserver %s ListenAndServe on %s\n", version, ln.Addr().String())
+	glog.Infos().Str("version", version).Str("listen_addr", ln.Addr().String()).Msg("apiserver ListenAndServe")
 	go server.Serve(ln)
 
 	glog.Flush()

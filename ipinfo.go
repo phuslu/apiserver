@@ -51,9 +51,7 @@ func (h *IpinfoHandler) Error(ctx *fasthttp.RequestCtx, err error) {
 }
 
 func (h *IpinfoHandler) Ipinfo(ctx *fasthttp.RequestCtx) {
-	if glog.V(2) {
-		glog.Infof("%s \"%s %s\" \"%s\"", ctx.RemoteAddr(), ctx.Method(), ctx.URI(), ctx.UserAgent())
-	}
+	glog.S(2).Str("remote_addr", ctx.RemoteAddr().String()).Bytes("method", ctx.Method()).Str("url", ctx.URI().String()).Bytes("user_agent", ctx.UserAgent())
 
 	var req IpinfoRequest
 
@@ -140,7 +138,7 @@ func (h *IpinfoHandler) ipinfoSearch(ipStr string) (*IpinfoItem, error) {
 		ISP:      match[2],
 	}
 
-	glog.Infof("ipinfoSearch(%#v) return %+v", ipStr, item)
+	glog.Infos().Str("ip", ipStr).Msgf("ipinfoSearch(...) return %+v", item)
 
 	h.Singleflight.Forget(url)
 

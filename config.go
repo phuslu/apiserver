@@ -43,35 +43,35 @@ func (c *Config) reload() error {
 func (c *Config) Watcher() {
 	filename := c.uri
 	if strings.Contains(filename, "://") {
-		glog.Warningf("config file path(%#v) not supportted by fsnotify", filename)
+		glog.Warnings().Str("filename", filename).Msg("config file path not supportted by fsnotify")
 		return
 	}
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		glog.Fatalf("fsnotify.NewWatcher() error: %+v", err)
+		glog.Fatals().Err(err).Msg("fsnotify.NewWatcher() error")
 	}
 	defer watcher.Close()
 
 	err = watcher.Add(filename)
 	if err != nil {
-		glog.Fatalf("watcher.Add(%#v) error: %+v", filename, err)
+		glog.Fatals().Err(err).Str("filename", filename).Msg("watcher.Add(...) error: %+v")
 		return
 	}
 
-	glog.Infof("fsnotify add %#v to watch list", filename)
+	glog.Infos().Str("filename", filename).Msg("fsnotify add file to watch list")
 
 	for {
 		select {
 		case event := <-watcher.Events:
 			if event.Op&fsnotify.Write == fsnotify.Write {
-				glog.Infof("modified config file: %+v", event.Name)
+				glog.Infos().Str("filename", filename).Str("event_name", event.Name).Msg("modified config file")
 				if c.reload() == nil {
-					glog.Infof("new config=%#v", c)
+					glog.Infos().Str("filename", filename).Msgf("%#v", c)
 				}
 			}
 		case err := <-watcher.Errors:
-			glog.Errorf("watch config file error: %+v", err)
+			glog.Errors().Err(err).Msg("watch config file error")
 		}
 	}
 }
