@@ -9,6 +9,8 @@ import (
 )
 
 type Config struct {
+	uri string
+
 	Default struct {
 		ListenAddr      string
 		TcpFastopen     bool
@@ -22,6 +24,19 @@ type Config struct {
 	}
 }
 
+func (c *Config) Reload() error {
+	tomlData, err := ioutil.ReadFile(c.uri)
+	if err != nil {
+		return err
+	}
+
+	if err = toml.Unmarshal(tomlData, &c); err != nil {
+		return fmt.Errorf("toml.Decode(%s) error: %+v", tomlData, err)
+	}
+
+	return nil
+}
+
 func NewConfig(filename string) (*Config, error) {
 	if filename == "" {
 		env := os.Getenv("GOLANG_ENV")
@@ -31,15 +46,10 @@ func NewConfig(filename string) (*Config, error) {
 		filename = env + ".toml"
 	}
 
-	tomlData, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return nil, fmt.Errorf("ioutil.ReadFile(%+v) error: %+v", filename, err)
+	c := &Config{uri: filename}
+	if err := c.Reload(); err != nil {
+		return nil, fmt.Errorf("load config from %#v error: %+v", filename, err)
 	}
 
-	var config Config
-	if err = toml.Unmarshal(tomlData, &config); err != nil {
-		return nil, fmt.Errorf("toml.Decode(%s) error: %+v", tomlData, err)
-	}
-
-	return &config, nil
+	return c, nil
 }
